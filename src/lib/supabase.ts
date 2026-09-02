@@ -68,4 +68,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: false,
   },
+  ...(typeof WebSocket === 'undefined' || isServer
+    ? { realtime: { transport: class DummySocket {} as any } }
+    : {}),
 });
