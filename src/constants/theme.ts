@@ -1,56 +1,36 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
+export const colors = {
+  bgBase: '#0B0A0F',
+  bgSurface: '#16141C',
+  bgElevated: '#1F1C26',
+  bgElevated2: '#272330',
+  border: '#2B2733',
+  textPrimary: '#F4F1EC',
+  textSecondary: '#948FA0',
+  textTertiary: '#635E70',
+  // Verde Musgo (Cor de destaque do Moovie)
+  accent: '#82A767',
+  accentSoft: '#212C1A',
+  accentBorder: '#3B4E30',
+  moss: '#82A767',
+  mossSoft: '#212C1A',
+  gold: '#82A767', // Verde Musgo principal
+  goldSoft: '#212C1A', // Fundo sutil do Verde Musgo
+  ana: '#4FC7C2',
+  anaSoft: '#173634',
+  luisa: '#E4699A',
+  luisaSoft: '#3A1F2A',
+};
 
-import '@/global.css';
+export const fonts = {
+  display: 'Fraunces_500Medium',
+  displayItalic: 'Fraunces_500Medium_Italic',
+  displaySemibold: 'Fraunces_600SemiBold',
+  body: 'Inter_400Regular',
+  bodyMedium: 'Inter_500Medium',
+  bodySemibold: 'Inter_600SemiBold',
+};
 
-import { Platform } from 'react-native';
-
-export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
-  },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-  },
-} as const;
-
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
-
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
-
+// Boilerplate template compatibility
 export const Spacing = {
   half: 2,
   one: 4,
@@ -61,5 +41,31 @@ export const Spacing = {
   six: 64,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+export const BottomTabInset = 50;
 export const MaxContentWidth = 800;
+
+export type ThemeColor = 'text' | 'background' | 'backgroundElement' | 'backgroundSelected' | 'textSecondary';
+
+export const Fonts = {
+  sans: 'normal',
+  serif: 'serif',
+  rounded: 'normal',
+  mono: 'monospace',
+};
+
+export const Colors = {
+  light: {
+    text: colors.textPrimary,
+    background: colors.bgBase,
+    backgroundElement: colors.bgSurface,
+    backgroundSelected: colors.bgElevated,
+    textSecondary: colors.textSecondary,
+  },
+  dark: {
+    text: colors.textPrimary,
+    background: colors.bgBase,
+    backgroundElement: colors.bgSurface,
+    backgroundSelected: colors.bgElevated,
+    textSecondary: colors.textSecondary,
+  },
+};
