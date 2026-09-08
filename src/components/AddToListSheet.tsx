@@ -7,9 +7,11 @@ import {
   Pressable,
   ScrollView,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { Check, Plus, Users, User, X } from 'lucide-react-native';
 import { colors, fonts } from '../constants/theme';
+import { getProfileAvatar, sharedListAvatar } from '../constants/profiles';
 import { supabase } from '../lib/supabase';
 import { addMovieToList, removeMovieFromList, getLists } from '../services/lists';
 import { MovieList } from '../types';
@@ -167,9 +169,19 @@ export const AddToListSheet: React.FC<AddToListSheetProps> = ({
                   >
                     <View style={styles.iconBadge}>
                       {isCoop ? (
-                        <Users size={18} color={colors.gold} />
+                        <Image
+                          source={sharedListAvatar}
+                          style={styles.listAvatarImg}
+                          resizeMode="cover"
+                        />
+                      ) : item.owner_key && getProfileAvatar(item.owner_key) ? (
+                        <Image
+                          source={getProfileAvatar(item.owner_key)!}
+                          style={styles.listAvatarImg}
+                          resizeMode="cover"
+                        />
                       ) : (
-                        <User size={18} color={colors.textSecondary} />
+                        <User size={18} color={item.owner_key === 'ana' ? colors.ana : colors.luisa} />
                       )}
                     </View>
 
@@ -306,6 +318,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  listAvatarImg: {
+    width: '100%',
+    height: '100%',
   },
   listInfo: {
     flex: 1,

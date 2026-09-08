@@ -75,34 +75,59 @@ export async function upsertRating(
 }
 
 /**
- * Marks a movie as watched by the user (upserts rating with watched = true)
- * and records a watch event with today's date.
+ * Toggles or sets a movie's watched status for the user.
+ * If watched is false, it updates rating and cleans up watch_events.
  */
-export async function markAsWatched(tmdbId: number, userKey: string): Promise<Rating> {
+export async function toggleWatched(
+  tmdbId: number,
+  userKey: string,
+  watched: boolean
+): Promise<Rating> {
   if (!tmdbId || !userKey) {
-    throw new Error('tmdbId and userKey are required to mark a movie as watched.');
+    throw new Error('tmdbId and userKey are required to update watched status.');
   }
 
   try {
-    // 1. Upsert rating with watched: true
-    const updatedRating = await upsertRating(tmdbId, userKey, { watched: true });
+    // 1. Upsert rating with the new watched status
+    const updatedRating = await upsertRating(tmdbId, userKey, { watched });
 
-    // 2. Record watch event for today
-    const today = new Date().toISOString().split('T')[0];
-    const { error: eventError } = await supabase.from('watch_events').insert({
-      user_key: userKey,
-      tmdb_id: tmdbId,
-      watched_on: today,
-    });
+    if (watched) {
+      // 2a. Record watch event for today
+      const today = new Date().toISOString().split('T')[0];
+      const { error: eventError } = await supabase.from('watch_events').insert({
+        user_key: userKey,
+        tmdb_id: tmdbId,
+        watched_on: today,
+      });
 
-    if (eventError) {
-      console.warn(`Warning: Failed to log watch event: ${eventError.message}`);
+      if (eventError) {
+        console.warn(`Warning: Failed to log watch event: ${eventError.message}`);
+      }
+    } else {
+      // 2b. Remove watch event(s) for this movie and user
+      const { error: deleteError } = await supabase
+        .from('watch_events')
+        .delete()
+        .eq('user_key', userKey)
+        .eq('tmdb_id', tmdbId);
+
+      if (deleteError) {
+        console.warn(`Warning: Failed to delete watch event: ${deleteError.message}`);
+      }
     }
 
     return updatedRating;
   } catch (error: any) {
-    throw new Error(`Error in markAsWatched: ${error.message}`);
+    throw new Error(`Error in toggleWatched: ${error.message}`);
   }
+}
+
+/**
+ * Marks a movie as watched by the user (upserts rating with watched = true)
+ * and records a watch event with today's date.
+ */
+export async function markAsWatched(tmdbId: number, userKey: string): Promise<Rating> {
+  return toggleWatched(tmdbId, userKey, true);
 }
 
 /**

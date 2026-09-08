@@ -15,11 +15,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Plus, Users, User, ChevronRight, X, Sparkles, RefreshCw } from 'lucide-react-native';
+import { Plus, Users, User, ChevronRight, X, Sparkles, RefreshCw, Trash2, Pencil } from 'lucide-react-native';
 import { colors, fonts } from '../../constants/theme';
-import { getProfileAvatar } from '../../constants/profiles';
+import { getProfileAvatar, sharedListAvatar } from '../../constants/profiles';
 import { useProfile } from '../../contexts/ProfileContext';
-import { createList, getLists } from '../../services/lists';
+import { createList, deleteList, getLists, updateListName } from '../../services/lists';
 import { ListType, MovieList } from '../../types';
 
 export default function ListsScreen() {
@@ -38,6 +38,16 @@ export default function ListsScreen() {
   const [newListType, setNewListType] = useState<ListType>('cooperative');
   const [creating, setCreating] = useState<boolean>(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  // Delete list state
+  const [listToDelete, setListToDelete] = useState<MovieList | null>(null);
+  const [deleting, setDeleting] = useState<boolean>(false);
+
+  // Rename list state
+  const [listToEdit, setListToEdit] = useState<MovieList | null>(null);
+  const [editedName, setEditedName] = useState<string>('');
+  const [editing, setEditing] = useState<boolean>(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const loadLists = useCallback(async () => {
     if (!currentUser?.key) return;
@@ -92,6 +102,54 @@ export default function ListsScreen() {
       setCreateError(err.message || 'Não foi possível criar a lista.');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleOpenEditList = (item: MovieList) => {
+    setListToEdit(item);
+    setEditedName(item.name);
+    setEditError(null);
+  };
+
+  const handleConfirmEditList = async () => {
+    const trimmed = editedName.trim();
+    if (!trimmed) {
+      setEditError('O nome da lista não pode ficar vazio.');
+      return;
+    }
+    if (!listToEdit) return;
+
+    try {
+      setEditing(true);
+      setEditError(null);
+      const targetId = listToEdit.id;
+      await updateListName(targetId, trimmed);
+      setLists((prev) =>
+        prev.map((l) => (l.id === targetId ? { ...l, name: trimmed } : l))
+      );
+      setListToEdit(null);
+    } catch (err: any) {
+      console.error('Failed to update list name:', err);
+      setEditError(err.message || 'Erro ao renomear lista.');
+    } finally {
+      setEditing(false);
+    }
+  };
+
+  const handleConfirmDeleteList = async () => {
+    if (!listToDelete) return;
+
+    try {
+      setDeleting(true);
+      const targetId = listToDelete.id;
+      setLists((prev) => prev.filter((l) => l.id !== targetId));
+      setListToDelete(null);
+      await deleteList(targetId);
+    } catch (err: any) {
+      console.error('Failed to delete list:', err);
+      loadLists();
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -175,7 +233,11 @@ export default function ListsScreen() {
               >
                 <View style={[styles.typeIconBadge, isCoop ? styles.coopBadge : styles.soloBadge]}>
                   {isCoop ? (
-                    <Users size={20} color={colors.gold} />
+                    <Image
+                      source={sharedListAvatar}
+                      style={styles.listAvatarImg}
+                      resizeMode="cover"
+                    />
                   ) : item.owner_key && getProfileAvatar(item.owner_key) ? (
                     <Image
                       source={getProfileAvatar(item.owner_key)!}
@@ -197,6 +259,32 @@ export default function ListsScreen() {
                     </Text>
                   </View>
                 </View>
+
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleOpenEditList(item);
+                  }}
+                  style={styles.editListBtn}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Renomear lista ${item.name}`}
+                >
+                  <Pencil size={15} color={colors.textSecondary} />
+                </Pressable>
+
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    setListToDelete(item);
+                  }}
+                  style={styles.deleteListBtn}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Excluir lista ${item.name}`}
+                >
+                  <Trash2 size={16} color="#FF6B6B" />
+                </Pressable>
 
                 <ChevronRight size={18} color={colors.textTertiary} />
               </Pressable>
@@ -305,6 +393,105 @@ export default function ListsScreen() {
             </Pressable>
           </Pressable>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Modal: Renomear Lista */}
+      <Modal
+        visible={listToEdit !== null}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setListToEdit(null)}
+      >
+        <Pressable style={styles.deleteModalBackdrop} onPress={() => setListToEdit(null)}>
+          <Pressable style={styles.renameModalCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.renameModalIconCircle}>
+              <Pencil size={22} color={colors.gold} />
+            </View>
+
+            <Text style={styles.deleteModalTitle}>Renomear lista</Text>
+
+            <View style={styles.renameInputGroup}>
+              <Text style={styles.inputLabel}>Novo nome da lista</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editedName}
+                onChangeText={setEditedName}
+                placeholder="Nome da lista..."
+                placeholderTextColor={colors.textTertiary}
+                autoFocus
+                returnKeyType="done"
+                onSubmitEditing={handleConfirmEditList}
+              />
+            </View>
+
+            {editError && <Text style={styles.createErrorText}>{editError}</Text>}
+
+            <View style={styles.deleteModalActions}>
+              <Pressable
+                style={styles.cancelDeleteButton}
+                onPress={() => setListToEdit(null)}
+                disabled={editing}
+              >
+                <Text style={styles.cancelDeleteButtonText}>Cancelar</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.confirmSaveButton}
+                onPress={handleConfirmEditList}
+                disabled={editing}
+              >
+                {editing ? (
+                  <ActivityIndicator size="small" color={colors.bgBase} />
+                ) : (
+                  <Text style={styles.confirmSaveButtonText}>Salvar</Text>
+                )}
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Modal: Confirm Delete List */}
+      <Modal
+        visible={listToDelete !== null}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setListToDelete(null)}
+      >
+        <Pressable style={styles.deleteModalBackdrop} onPress={() => setListToDelete(null)}>
+          <Pressable style={styles.deleteModalCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.deleteModalIconCircle}>
+              <Trash2 size={24} color="#FF6B6B" />
+            </View>
+
+            <Text style={styles.deleteModalTitle}>Excluir lista</Text>
+            <Text style={styles.deleteModalMessage}>
+              Tem certeza que deseja excluir a lista "{listToDelete?.name}"? Todos os filmes desta lista serão removidos.
+            </Text>
+
+            <View style={styles.deleteModalActions}>
+              <Pressable
+                style={styles.cancelDeleteButton}
+                onPress={() => setListToDelete(null)}
+                disabled={deleting}
+              >
+                <Text style={styles.cancelDeleteButtonText}>Cancelar</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.confirmDeleteButton}
+                onPress={handleConfirmDeleteList}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.confirmDeleteButtonText}>Excluir</Text>
+                )}
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </View>
   );
@@ -579,5 +766,125 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemibold,
     color: colors.bgBase,
     fontSize: 15,
+  },
+  editListBtn: {
+    padding: 8,
+    marginRight: 4,
+    borderRadius: 8,
+    backgroundColor: colors.bgElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  deleteListBtn: {
+    padding: 8,
+    marginRight: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+  },
+  deleteModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  deleteModalCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: colors.bgSurface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 22,
+    alignItems: 'center',
+  },
+  deleteModalIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255, 107, 107, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  deleteModalTitle: {
+    fontFamily: fonts.display,
+    color: colors.textPrimary,
+    fontSize: 19,
+    marginBottom: 8,
+  },
+  deleteModalMessage: {
+    fontFamily: fonts.body,
+    color: colors.textSecondary,
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 22,
+  },
+  deleteModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  cancelDeleteButton: {
+    flex: 1,
+    backgroundColor: colors.bgElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  cancelDeleteButtonText: {
+    fontFamily: fonts.bodyMedium,
+    color: colors.textSecondary,
+    fontSize: 14,
+  },
+  confirmDeleteButton: {
+    flex: 1,
+    backgroundColor: '#D94343',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  confirmDeleteButtonText: {
+    fontFamily: fonts.bodySemibold,
+    color: '#fff',
+    fontSize: 14,
+  },
+  renameModalCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: colors.bgSurface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 22,
+    alignItems: 'center',
+  },
+  renameModalIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.goldSoft,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  renameInputGroup: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  confirmSaveButton: {
+    flex: 1,
+    backgroundColor: colors.gold,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  confirmSaveButtonText: {
+    fontFamily: fonts.bodySemibold,
+    color: colors.bgBase,
+    fontSize: 14,
   },
 });

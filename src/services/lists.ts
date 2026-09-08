@@ -70,6 +70,33 @@ export async function createList(
 }
 
 /**
+ * Updates a list's name.
+ */
+export async function updateListName(listId: string, newName: string): Promise<MovieList> {
+  const trimmedName = newName?.trim();
+  if (!listId || !trimmedName) {
+    throw new Error('listId and a valid new list name are required.');
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('lists')
+      .update({ name: trimmedName })
+      .eq('id', listId)
+      .select('id, name, type, owner_key, created_at')
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update list name: ${error.message}`);
+    }
+
+    return data as MovieList;
+  } catch (error: any) {
+    throw new Error(`Error in updateListName: ${error.message}`);
+  }
+}
+
+/**
  * Deletes a list by its ID.
  */
 export async function deleteList(listId: string): Promise<void> {

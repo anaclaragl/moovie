@@ -54,7 +54,7 @@ export const RatingPill: React.FC<RatingPillProps> = ({
           </View>
         ) : (
           <View style={styles.unseenBadge}>
-            <Text style={styles.unseenText}>ainda não viu</Text>
+            <Text style={styles.unseenText}>não viu</Text>
           </View>
         )}
       </View>

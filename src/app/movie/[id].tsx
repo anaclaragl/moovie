@@ -26,7 +26,7 @@ import { colors, fonts } from '../../constants/theme';
 import { getProfileAvatar } from '../../constants/profiles';
 import { useProfile } from '../../contexts/ProfileContext';
 import { getMovieDetails, getMovieRecommendations, getPosterUrl } from '../../lib/tmdb';
-import { getRatingsForMovie, markAsWatched } from '../../services/ratings';
+import { getRatingsForMovie, toggleWatched } from '../../services/ratings';
 import { Movie, MovieDetails, Rating } from '../../types';
 import { RatingPill } from '../../components/RatingPill';
 import { AddToListSheet } from '../../components/AddToListSheet';
@@ -51,6 +51,11 @@ export default function MovieDetailScreen() {
   const [reviewSheetVisible, setReviewSheetVisible] = useState<boolean>(false);
   const [markingWatched, setMarkingWatched] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const currentUserRating = currentUser
+    ? ratings.find((r) => r.user_key === currentUser.key)
+    : null;
+  const isWatchedByCurrentUser = !!currentUserRating?.watched;
 
   const loadData = useCallback(async () => {
     if (!tmdbId || isNaN(tmdbId)) {
@@ -95,9 +100,11 @@ export default function MovieDetailScreen() {
   const handleMarkWatched = async () => {
     if (!currentUser?.key || !tmdbId || markingWatched) return;
 
+    const nextWatched = !isWatchedByCurrentUser;
+
     try {
       setMarkingWatched(true);
-      const updatedRating = await markAsWatched(tmdbId, currentUser.key);
+      const updatedRating = await toggleWatched(tmdbId, currentUser.key, nextWatched);
 
       // Update local ratings list
       setRatings((prev) => {
@@ -105,9 +112,9 @@ export default function MovieDetailScreen() {
         return [...filtered, updatedRating];
       });
 
-      showToast('Marcado como assistido!');
+      showToast(nextWatched ? 'Marcado como assistido!' : 'Desmarcado de assistidos!');
     } catch (err: any) {
-      showToast('Erro ao marcar como assistido');
+      showToast('Erro ao atualizar status de assistido');
     } finally {
       setMarkingWatched(false);
     }
@@ -155,11 +162,6 @@ export default function MovieDetailScreen() {
 
   const anaRating = ratings.find((r) => r.user_key === 'ana');
   const luisaRating = ratings.find((r) => r.user_key === 'luisa');
-
-  const currentUserRating = currentUser
-    ? ratings.find((r) => r.user_key === currentUser.key)
-    : null;
-  const isWatchedByCurrentUser = !!currentUserRating?.watched;
 
   return (
     <View style={styles.container}>
@@ -271,7 +273,7 @@ export default function MovieDetailScreen() {
                 </View>
               ) : (
                 <Text style={styles.inlineUnratedText}>
-                  {anaRating?.watched ? 'assistiu' : 'ainda não viu'}
+                  {anaRating?.watched ? 'assistiu' : 'não viu'}
                 </Text>
               )}
             </View>
@@ -300,7 +302,7 @@ export default function MovieDetailScreen() {
                 </View>
               ) : (
                 <Text style={styles.inlineUnratedText}>
-                  {luisaRating?.watched ? 'assistiu' : 'ainda não viu'}
+                  {luisaRating?.watched ? 'assistiu' : 'não viu'}
                 </Text>
               )}
             </View>

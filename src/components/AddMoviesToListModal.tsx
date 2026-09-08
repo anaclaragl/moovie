@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Search, X, Plus, Check, Film, Star, Sparkles, Flame } from 'lucide-react-native';
 import { colors, fonts } from '../constants/theme';
 import { getPopularMovies, getMovieRecommendations, searchMovies, getPosterUrl } from '../lib/tmdb';
@@ -39,6 +40,7 @@ export const AddMoviesToListModal: React.FC<AddMoviesToListModalProps> = ({
   currentUserKey,
   onMovieAdded,
 }) => {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<Movie[]>([]);
   const [searching, setSearching] = useState<boolean>(false);
@@ -133,6 +135,14 @@ export const AddMoviesToListModal: React.FC<AddMoviesToListModalProps> = ({
     } finally {
       setAddingId(null);
     }
+  };
+
+  const handleOpenMovieDetails = (movie: Movie) => {
+    onClose();
+    router.push({
+      pathname: '/movie/[id]',
+      params: { id: movie.id.toString() },
+    });
   };
 
   if (!visible) return null;
@@ -235,28 +245,35 @@ export const AddMoviesToListModal: React.FC<AddMoviesToListModalProps> = ({
 
                 return (
                   <View style={styles.movieRow}>
-                    {posterUrl ? (
-                      <Image source={{ uri: posterUrl }} style={styles.poster} />
-                    ) : (
-                      <View style={styles.posterFallback}>
-                        <Film size={20} color={colors.textTertiary} />
-                      </View>
-                    )}
+                    <Pressable
+                      style={styles.movieRowContent}
+                      onPress={() => handleOpenMovieDetails(item)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Ver detalhes de ${item.title}`}
+                    >
+                      {posterUrl ? (
+                        <Image source={{ uri: posterUrl }} style={styles.poster} />
+                      ) : (
+                        <View style={styles.posterFallback}>
+                          <Film size={20} color={colors.textTertiary} />
+                        </View>
+                      )}
 
-                    <View style={styles.movieInfo}>
-                      <Text style={styles.movieTitle} numberOfLines={2}>
-                        {item.title}
-                      </Text>
-                      <View style={styles.metaRow}>
-                        {year ? <Text style={styles.yearText}>{year}</Text> : null}
-                        {item.vote_average ? (
-                          <View style={styles.ratingBadge}>
-                            <Star size={11} color={colors.gold} fill={colors.gold} />
-                            <Text style={styles.ratingText}>{item.vote_average.toFixed(1)}</Text>
-                          </View>
-                        ) : null}
+                      <View style={styles.movieInfo}>
+                        <Text style={styles.movieTitle} numberOfLines={2}>
+                          {item.title}
+                        </Text>
+                        <View style={styles.metaRow}>
+                          {year ? <Text style={styles.yearText}>{year}</Text> : null}
+                          {item.vote_average ? (
+                            <View style={styles.ratingBadge}>
+                              <Star size={11} color={colors.gold} fill={colors.gold} />
+                              <Text style={styles.ratingText}>{item.vote_average.toFixed(1)}</Text>
+                            </View>
+                          ) : null}
+                        </View>
                       </View>
-                    </View>
+                    </Pressable>
 
                     {/* Add / Added Button */}
                     <Pressable
@@ -386,6 +403,12 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: 10,
   },
+  movieRowContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 10,
+  },
   poster: {
     width: 52,
     height: 76,
@@ -403,7 +426,6 @@ const styles = StyleSheet.create({
   movieInfo: {
     flex: 1,
     marginLeft: 12,
-    marginRight: 10,
   },
   movieTitle: {
     fontFamily: fonts.bodySemibold,
