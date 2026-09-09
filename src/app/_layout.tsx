@@ -49,6 +49,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="list/[id]" />
         <Stack.Screen name="movie/[id]" />
+        <Stack.Screen name="watched" />
       </Stack>
     </ProfileProvider>
   );

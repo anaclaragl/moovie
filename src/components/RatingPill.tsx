@@ -46,11 +46,15 @@ export const RatingPill: React.FC<RatingPillProps> = ({
           )}
         </View>
 
-        {/* Score pill or "ainda não viu" */}
+        {/* Score pill, "assistiu" or "não viu" */}
         {hasScore ? (
           <View style={styles.scoreBadge}>
             <Star size={14} color={colors.gold} fill={colors.gold} />
             <Text style={styles.scoreText}>{score.toFixed(1)}</Text>
+          </View>
+        ) : watched ? (
+          <View style={styles.watchedBadge}>
+            <Text style={styles.watchedBadgeText}>assistiu</Text>
           </View>
         ) : (
           <View style={styles.unseenBadge}>
@@ -127,6 +131,19 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemibold,
     color: colors.gold,
     fontSize: 13,
+  },
+  watchedBadge: {
+    backgroundColor: colors.accentSoft || 'rgba(130, 167, 103, 0.15)',
+    borderWidth: 1,
+    borderColor: colors.accentBorder || 'rgba(130, 167, 103, 0.3)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  watchedBadgeText: {
+    fontFamily: fonts.bodySemibold,
+    color: colors.gold,
+    fontSize: 12,
   },
   unseenBadge: {
     backgroundColor: colors.bgElevated,

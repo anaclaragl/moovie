@@ -39,9 +39,14 @@ export interface Rating {
 }
 
 export interface RatingUpsertData {
-  score?: number;
+  score?: number | null;
   watched?: boolean;
   review?: string | null;
+}
+
+export interface WatchedMovieItem {
+  rating: Rating;
+  movie: MovieDetails | null;
 }
 
 export interface WatchEvent {

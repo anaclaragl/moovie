@@ -60,8 +60,8 @@ export const ReviewSheet: React.FC<ReviewSheetProps> = ({
       setErrorMsg(null);
 
       const updated = await upsertRating(tmdbId, currentUserKey, {
-        score: score > 0 ? score : undefined,
-        review: review.trim() || undefined,
+        score: score > 0 ? score : null,
+        review: review.trim() || null,
         watched: true,
       });
 

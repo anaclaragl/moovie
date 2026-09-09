@@ -109,7 +109,10 @@ export default function MovieDetailScreen() {
       // Update local ratings list
       setRatings((prev) => {
         const filtered = prev.filter((r) => r.user_key !== currentUser.key);
-        return [...filtered, updatedRating];
+        if (nextWatched) {
+          return [...filtered, updatedRating];
+        }
+        return filtered;
       });
 
       showToast(nextWatched ? 'Marcado como assistido!' : 'Desmarcado de assistidos!');

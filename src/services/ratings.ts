@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
-import { Rating, RatingUpsertData } from '../types';
+import { getMovieDetails } from '../lib/tmdb';
+import { Rating, RatingUpsertData, WatchedMovieItem } from '../types';
 
 /**
  * Fetches ratings for a specific movie by TMDB ID (returns ratings for both users if available).
@@ -37,7 +38,7 @@ export async function upsertRating(
     throw new Error('tmdbId and userKey are required to upsert a rating.');
   }
 
-  if (data.score !== undefined && (data.score < 0 || data.score > 5)) {
+  if (data.score !== undefined && data.score !== null && (data.score < 0 || data.score > 5)) {
     throw new Error('Rating score must be between 0 and 5.');
   }
 
@@ -49,7 +50,7 @@ export async function upsertRating(
     };
 
     if (data.score !== undefined) {
-      updatePayload.score = data.score;
+      updatePayload.score = data.score === 0 || data.score === null ? null : data.score;
     }
     if (data.watched !== undefined) {
       updatePayload.watched = data.watched;
@@ -76,7 +77,7 @@ export async function upsertRating(
 
 /**
  * Toggles or sets a movie's watched status for the user.
- * If watched is false, it updates rating and cleans up watch_events.
+ * If watched is false, it deletes the rating row from ratings table and cleans up watch_events.
  */
 export async function toggleWatched(
   tmdbId: number,
@@ -88,10 +89,10 @@ export async function toggleWatched(
   }
 
   try {
-    // 1. Upsert rating with the new watched status
-    const updatedRating = await upsertRating(tmdbId, userKey, { watched });
-
     if (watched) {
+      // 1. Upsert rating with watched = true
+      const updatedRating = await upsertRating(tmdbId, userKey, { watched: true });
+
       // 2a. Record watch event for today
       const today = new Date().toISOString().split('T')[0];
       const { error: eventError } = await supabase.from('watch_events').insert({
@@ -103,8 +104,21 @@ export async function toggleWatched(
       if (eventError) {
         console.warn(`Warning: Failed to log watch event: ${eventError.message}`);
       }
+
+      return updatedRating;
     } else {
-      // 2b. Remove watch event(s) for this movie and user
+      // 1. Unmarking watched: delete rating row completely from ratings table
+      const { error: deleteRatingError } = await supabase
+        .from('ratings')
+        .delete()
+        .eq('user_key', userKey)
+        .eq('tmdb_id', tmdbId);
+
+      if (deleteRatingError) {
+        throw new Error(`Failed to delete rating: ${deleteRatingError.message}`);
+      }
+
+      // 2. Remove watch event(s) for this movie and user
       const { error: deleteError } = await supabase
         .from('watch_events')
         .delete()
@@ -114,9 +128,15 @@ export async function toggleWatched(
       if (deleteError) {
         console.warn(`Warning: Failed to delete watch event: ${deleteError.message}`);
       }
-    }
 
-    return updatedRating;
+      return {
+        tmdb_id: tmdbId,
+        user_key: userKey,
+        watched: false,
+        score: undefined,
+        review: null,
+      };
+    }
   } catch (error: any) {
     throw new Error(`Error in toggleWatched: ${error.message}`);
   }
@@ -128,6 +148,52 @@ export async function toggleWatched(
  */
 export async function markAsWatched(tmdbId: number, userKey: string): Promise<Rating> {
   return toggleWatched(tmdbId, userKey, true);
+}
+
+/**
+ * Retrieves all movies watched by a user, enriched with TMDB movie details.
+ */
+export async function getUserWatchedMovies(userKey: string): Promise<WatchedMovieItem[]> {
+  if (!userKey) {
+    throw new Error('userKey is required to fetch watched movies.');
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('ratings')
+      .select('id, tmdb_id, user_key, score, watched, review, updated_at')
+      .eq('user_key', userKey)
+      .eq('watched', true)
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch watched movies: ${error.message}`);
+    }
+
+    const ratings = (data as Rating[]) || [];
+
+    const enrichedItems: WatchedMovieItem[] = await Promise.all(
+      ratings.map(async (rating) => {
+        try {
+          const movie = await getMovieDetails(rating.tmdb_id);
+          return {
+            rating,
+            movie,
+          };
+        } catch (tmdbErr) {
+          console.warn(`Could not load movie details for TMDB ID ${rating.tmdb_id}:`, tmdbErr);
+          return {
+            rating,
+            movie: null,
+          };
+        }
+      })
+    );
+
+    return enrichedItems;
+  } catch (error: any) {
+    throw new Error(`Error in getUserWatchedMovies: ${error.message}`);
+  }
 }
 
 /**

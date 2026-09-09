@@ -199,20 +199,12 @@ export default function ListDetailScreen() {
           <ArrowLeft size={22} color={colors.textPrimary} />
         </Pressable>
 
-        <Pressable
-          style={styles.headerTextContainer}
-          onPress={handleOpenEditName}
-          accessibilityRole="button"
-          accessibilityLabel="Editar nome da lista"
-        >
-          <View style={styles.titleRow}>
-            <Text style={styles.title} numberOfLines={1}>
-              {listName}
-            </Text>
-            <Pencil size={13} color={colors.textTertiary} style={{ marginLeft: 6 }} />
-          </View>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.title} numberOfLines={1}>
+            {listName}
+          </Text>
           <Text style={styles.subtitle}>{subtitleText}</Text>
-        </Pressable>
+        </View>
 
         <View style={styles.headerActions}>
           {/* Button: Renomear Lista */}
@@ -506,31 +498,28 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: colors.bgSurface,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   headerTextContainer: {
     flex: 1,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginRight: 8,
   },
   title: {
     fontFamily: fonts.display,
     color: colors.textPrimary,
-    fontSize: 20,
+    fontSize: 18,
   },
   subtitle: {
     fontFamily: fonts.body,
@@ -541,7 +530,7 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   editListHeaderBtn: {
     width: 36,
@@ -630,16 +619,18 @@ const styles = StyleSheet.create({
   addMoviesBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    gap: 4,
     backgroundColor: colors.gold,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    height: 36,
+    paddingHorizontal: 10,
     borderRadius: 10,
   },
   addMoviesBtnText: {
     fontFamily: fonts.bodySemibold,
     color: colors.bgBase,
     fontSize: 13,
+    lineHeight: 16,
   },
   emptyAddBtn: {
     flexDirection: 'row',

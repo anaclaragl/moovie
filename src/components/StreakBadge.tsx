@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, Pressable } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Flame } from 'lucide-react-native';
 import { colors, fonts } from '../constants/theme';
 import { getCurrentStreak } from '../services/streak';
 
 interface StreakBadgeProps {
   userKey: string;
+  onPress?: () => void;
 }
 
-export const StreakBadge: React.FC<StreakBadgeProps> = ({ userKey }) => {
+export const StreakBadge: React.FC<StreakBadgeProps> = ({ userKey, onPress }) => {
+  const router = useRouter();
   const [streak, setStreak] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -38,15 +41,31 @@ export const StreakBadge: React.FC<StreakBadgeProps> = ({ userKey }) => {
     };
   }, [userKey]);
 
+  const handlePress = () => {
+    if (onPress) {
+      onPress();
+    } else {
+      router.push({ pathname: '/watched' as any });
+    }
+  };
+
   return (
-    <View style={styles.container}>
+    <Pressable
+      onPress={handlePress}
+      style={({ pressed }) => [
+        styles.container,
+        pressed && styles.pressed,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={`Streak de ${streak ?? 0} dias. Toque para ver filmes assistidos.`}
+    >
       <Flame size={16} color={colors.gold} fill={streak && streak > 0 ? colors.gold : 'transparent'} />
       {loading ? (
         <ActivityIndicator size="small" color={colors.gold} style={styles.loader} />
       ) : (
         <Text style={styles.text}>{streak ?? 0}</Text>
       )}
-    </View>
+    </Pressable>
   );
 };
 
@@ -61,6 +80,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gold,
     gap: 4,
+  },
+  pressed: {
+    opacity: 0.75,
+    transform: [{ scale: 0.96 }],
   },
   loader: {
     width: 14,
