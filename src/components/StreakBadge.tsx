@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, ActivityIndicator, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Flame } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import { colors, fonts } from '../constants/theme';
 import { getCurrentStreak } from '../services/streak';
 
@@ -57,7 +57,7 @@ export const StreakBadge: React.FC<StreakBadgeProps> = ({ userKey, onPress }) =>
         pressed && styles.pressed,
       ]}
       accessibilityRole="button"
-      accessibilityLabel={`Streak de ${streak ?? 0} dias. Toque para ver filmes assistidos.`}
+      accessibilityLabel={`Toque para ver filmes assistidos.`}
     >
       <Flame size={16} color={colors.gold} fill={streak && streak > 0 ? colors.gold : 'transparent'} />
       {loading ? (

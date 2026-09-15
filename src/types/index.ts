@@ -14,6 +14,7 @@ export interface MovieList {
   type: ListType;
   owner_key: string | null;
   created_at: string;
+  is_fixed?: boolean;
 }
 
 export interface ListItem {

@@ -13,7 +13,7 @@ import { Check, Plus, Users, User, X } from 'lucide-react-native';
 import { colors, fonts } from '../constants/theme';
 import { getProfileAvatar, sharedListAvatar } from '../constants/profiles';
 import { supabase } from '../lib/supabase';
-import { addMovieToList, removeMovieFromList, getLists } from '../services/lists';
+import { addMovieToList, removeMovieFromList, getLists, WATCHED_TOGETHER_LIST_ID } from '../services/lists';
 import { MovieList } from '../types';
 
 interface AddToListSheetProps {
@@ -54,7 +54,8 @@ export const AddToListSheet: React.FC<AddToListSheetProps> = ({
     try {
       setLoading(true);
       setErrorMsg(null);
-      const userLists = await getLists(currentUserKey);
+      const allLists = await getLists(currentUserKey);
+      const userLists = allLists.filter((l) => !l.is_fixed && l.id !== WATCHED_TOGETHER_LIST_ID);
       setLists(userLists);
 
       // Check which lists already contain this movie

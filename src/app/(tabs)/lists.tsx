@@ -17,9 +17,9 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Plus, Users, User, ChevronRight, X, Sparkles, RefreshCw, Trash2, Pencil } from 'lucide-react-native';
 import { colors, fonts } from '../../constants/theme';
-import { getProfileAvatar, sharedListAvatar } from '../../constants/profiles';
+import { getProfileAvatar, sharedListAvatar, watchedTogetherAvatar } from '../../constants/profiles';
 import { useProfile } from '../../contexts/ProfileContext';
-import { createList, deleteList, getLists, updateListName } from '../../services/lists';
+import { createList, deleteList, getLists, updateListName, WATCHED_TOGETHER_LIST_ID } from '../../services/lists';
 import { ListType, MovieList } from '../../types';
 
 export default function ListsScreen() {
@@ -137,7 +137,7 @@ export default function ListsScreen() {
   };
 
   const handleConfirmDeleteList = async () => {
-    if (!listToDelete) return;
+    if (!listToDelete || listToDelete.is_fixed || listToDelete.id === WATCHED_TOGETHER_LIST_ID) return;
 
     try {
       setDeleting(true);
@@ -223,6 +223,7 @@ export default function ListsScreen() {
             </View>
           }
           renderItem={({ item }) => {
+            const isFixed = item.is_fixed || item.id === WATCHED_TOGETHER_LIST_ID;
             const isCoop = item.type === 'cooperative';
             const ownerLabel = item.owner_key === 'ana' ? 'Cowana' : item.owner_key === 'luisa' ? 'Cowluisa' : item.owner_key;
 
@@ -232,7 +233,13 @@ export default function ListsScreen() {
                 style={({ pressed }) => [styles.listItemCard, pressed && styles.cardPressed]}
               >
                 <View style={[styles.typeIconBadge, isCoop ? styles.coopBadge : styles.soloBadge]}>
-                  {isCoop ? (
+                  {isFixed ? (
+                    <Image
+                      source={watchedTogetherAvatar}
+                      style={styles.listAvatarImg}
+                      resizeMode="cover"
+                    />
+                  ) : isCoop ? (
                     <Image
                       source={sharedListAvatar}
                       style={styles.listAvatarImg}
@@ -255,7 +262,11 @@ export default function ListsScreen() {
                   </Text>
                   <View style={styles.badgeRow}>
                     <Text style={styles.typeBadgeText}>
-                      {isCoop ? 'Cooperativa (Ana & Luisa)' : `Solo (${ownerLabel})`}
+                      {isFixed
+                        ? 'Automática (Ana & Luisa)'
+                        : isCoop
+                          ? 'Cooperativa (Ana & Luisa)'
+                          : `Solo (${ownerLabel})`}
                     </Text>
                   </View>
                 </View>
@@ -273,18 +284,20 @@ export default function ListsScreen() {
                   <Pencil size={15} color={colors.textSecondary} />
                 </Pressable>
 
-                <Pressable
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    setListToDelete(item);
-                  }}
-                  style={styles.deleteListBtn}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Excluir lista ${item.name}`}
-                >
-                  <Trash2 size={16} color="#FF6B6B" />
-                </Pressable>
+                {!isFixed && (
+                  <Pressable
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      setListToDelete(item);
+                    }}
+                    style={styles.deleteListBtn}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Excluir lista ${item.name}`}
+                  >
+                    <Trash2 size={16} color="#FF6B6B" />
+                  </Pressable>
+                )}
 
                 <ChevronRight size={18} color={colors.textTertiary} />
               </Pressable>

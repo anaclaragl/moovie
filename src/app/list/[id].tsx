@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Film, RefreshCw, Plus, Trash2, Check, Pencil } from 'lucide-react-native';
 import { colors, fonts } from '../../constants/theme';
 import { useProfile } from '../../contexts/ProfileContext';
-import { deleteList, getListItemsWithMovies, removeMovieFromList, subscribeToList, updateListName } from '../../services/lists';
+import { deleteList, getListItemsWithMovies, removeMovieFromList, subscribeToList, updateListName, WATCHED_TOGETHER_LIST_ID } from '../../services/lists';
 import { getWatchedMovieIds } from '../../services/ratings';
 import { ListItemWithMovie } from '../../types';
 import { PosterCard } from '../../components/PosterCard';
@@ -29,6 +29,7 @@ export default function ListDetailScreen() {
   const { currentUser } = useProfile();
   const params = useLocalSearchParams<{ id: string; name?: string }>();
   const listId = params.id as string;
+  const isFixedList = listId === WATCHED_TOGETHER_LIST_ID;
   const [listName, setListName] = useState<string>((params.name as string) || 'Detalhes da Lista');
 
   const [items, setItems] = useState<ListItemWithMovie[]>([]);
@@ -63,14 +64,16 @@ export default function ListDetailScreen() {
       const tmdbIds = data.map((d) => d.tmdb_id);
       const watched = await getWatchedMovieIds(tmdbIds);
 
-      // Sort: unwatched first, watched movies pushed to the end
-      const sorted = [...data].sort((a, b) => {
-        const aWatched = watched.has(a.tmdb_id);
-        const bWatched = watched.has(b.tmdb_id);
-        if (aWatched && !bWatched) return 1;  // a goes after b
-        if (!aWatched && bWatched) return -1; // a goes before b
-        return 0; // retain chronological order within same status
-      });
+      // Sort: unwatched first, watched movies pushed to the end (or as is for fixed list)
+      const sorted = isFixedList
+        ? data
+        : [...data].sort((a, b) => {
+            const aWatched = watched.has(a.tmdb_id);
+            const bWatched = watched.has(b.tmdb_id);
+            if (aWatched && !bWatched) return 1;  // a goes after b
+            if (!aWatched && bWatched) return -1; // a goes before b
+            return 0; // retain chronological order within same status
+          });
 
       setItems(sorted);
       setWatchedIds(watched);
@@ -81,16 +84,15 @@ export default function ListDetailScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [listId]);
+  }, [listId, isFixedList]);
 
   useEffect(() => {
     loadItems();
 
     if (!listId) return;
 
-    // Realtime subscription for list_items changes (INSERT, DELETE)
+    // Realtime subscription for list changes
     const unsubscribe = subscribeToList(listId, (_payload) => {
-      // Re-fetch enriched items on any changes
       loadItems();
     });
 
@@ -140,7 +142,7 @@ export default function ListDetailScreen() {
   };
 
   const handleConfirmRemove = async () => {
-    if (!movieToRemove) return;
+    if (!movieToRemove || isFixedList) return;
     try {
       setIsRemoving(true);
       const targetTmdbId = movieToRemove.tmdb_id;
@@ -159,7 +161,7 @@ export default function ListDetailScreen() {
   };
 
   const handleDeleteList = async () => {
-    if (!listId || isDeletingList) return;
+    if (!listId || isDeletingList || isFixedList) return;
     try {
       setIsDeletingList(true);
       await deleteList(listId);
@@ -179,8 +181,9 @@ export default function ListDetailScreen() {
   const cardHeight = Math.floor(cardWidth * 1.5);
 
   const watchedCount = items.filter((i) => watchedIds.has(i.tmdb_id)).length;
-  const subtitleText =
-    items.length === 0
+  const subtitleText = isFixedList
+    ? `${items.length} ${items.length === 1 ? 'filme assistido por vocês' : 'filmes assistidos por vocês'}`
+    : items.length === 0
       ? '0 filmes'
       : watchedCount > 0
         ? `${items.length} ${items.length === 1 ? 'filme' : 'filmes'} • ${watchedCount} assistido${watchedCount === 1 ? '' : 's'}`
@@ -217,26 +220,30 @@ export default function ListDetailScreen() {
             <Pencil size={16} color={colors.textSecondary} />
           </Pressable>
 
-          {/* Button: Excluir Lista */}
-          <Pressable
-            onPress={() => setDeleteListModalVisible(true)}
-            style={styles.deleteListHeaderBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Excluir lista"
-          >
-            <Trash2 size={16} color="#FF6B6B" />
-          </Pressable>
+          {/* Button: Excluir Lista (Oculto em lista fixa) */}
+          {!isFixedList && (
+            <Pressable
+              onPress={() => setDeleteListModalVisible(true)}
+              style={styles.deleteListHeaderBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Excluir lista"
+            >
+              <Trash2 size={16} color="#FF6B6B" />
+            </Pressable>
+          )}
 
-          {/* Button: Adicionar Filmes */}
-          <Pressable
-            onPress={() => setAddModalVisible(true)}
-            style={styles.addMoviesBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Adicionar filmes"
-          >
-            <Plus size={16} color={colors.bgBase} strokeWidth={2.5} />
-            <Text style={styles.addMoviesBtnText}>Adicionar</Text>
-          </Pressable>
+          {/* Button: Adicionar Filmes (Oculto em lista fixa) */}
+          {!isFixedList && (
+            <Pressable
+              onPress={() => setAddModalVisible(true)}
+              style={styles.addMoviesBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Adicionar filmes"
+            >
+              <Plus size={16} color={colors.bgBase} strokeWidth={2.5} />
+              <Text style={styles.addMoviesBtnText}>Adicionar</Text>
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -272,17 +279,23 @@ export default function ListDetailScreen() {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Film size={44} color={colors.textTertiary} style={{ marginBottom: 14 }} />
-              <Text style={styles.emptyTitle}>Nenhum filme na lista</Text>
-              <Text style={styles.emptyDescription}>
-                Adicione filmes baseados nos seus favoritos ou pesquise qualquer título do TMDB!
+              <Text style={styles.emptyTitle}>
+                {isFixedList ? 'Nenhum filme assistido por vocês duas ainda' : 'Nenhum filme na lista'}
               </Text>
-              <Pressable
-                onPress={() => setAddModalVisible(true)}
-                style={styles.emptyAddBtn}
-              >
-                <Plus size={16} color={colors.bgBase} strokeWidth={2.5} />
-                <Text style={styles.emptyAddBtnText}>Adicionar filmes</Text>
-              </Pressable>
+              <Text style={styles.emptyDescription}>
+                {isFixedList
+                  ? 'Quando você e a Luísa marcarem o mesmo filme como assistido, ele aparecerá aqui automaticamente!'
+                  : 'Adicione filmes baseados nos seus favoritos ou pesquise qualquer título do TMDB!'}
+              </Text>
+              {!isFixedList && (
+                <Pressable
+                  onPress={() => setAddModalVisible(true)}
+                  style={styles.emptyAddBtn}
+                >
+                  <Plus size={16} color={colors.bgBase} strokeWidth={2.5} />
+                  <Text style={styles.emptyAddBtnText}>Adicionar filmes</Text>
+                </Pressable>
+              )}
             </View>
           }
           renderItem={({ item }) => {
@@ -291,11 +304,11 @@ export default function ListDetailScreen() {
               title: `Filme #${item.tmdb_id}`,
               poster_path: null,
             };
-            const isWatched = watchedIds.has(item.tmdb_id);
+            const isWatched = isFixedList || watchedIds.has(item.tmdb_id);
 
             return (
               <View style={[styles.cardItemWrapper, { width: cardWidth }]}>
-                <View style={[styles.cardRelative, isWatched && styles.cardWatchedDim]}>
+                <View style={[styles.cardRelative, isWatched && !isFixedList && styles.cardWatchedDim]}>
                   <PosterCard
                     movie={movie}
                     width={cardWidth}
@@ -303,19 +316,21 @@ export default function ListDetailScreen() {
                     onPress={() => handleMoviePress(item.tmdb_id)}
                   />
 
-                  {/* Remove Button in top right corner */}
-                  <Pressable
-                    style={styles.deleteCardBtn}
-                    onPress={() => setMovieToRemove(item)}
-                    hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Remover ${movie.title} da lista`}
-                  >
-                    <Trash2 size={12} color="#FF6B6B" />
-                  </Pressable>
+                  {/* Remove Button in top right corner (Oculto em lista fixa) */}
+                  {!isFixedList && (
+                    <Pressable
+                      style={styles.deleteCardBtn}
+                      onPress={() => setMovieToRemove(item)}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remover ${movie.title} da lista`}
+                    >
+                      <Trash2 size={12} color="#FF6B6B" />
+                    </Pressable>
+                  )}
 
                   {/* Watched Badge */}
-                  {isWatched && (
+                  {isWatched && !isFixedList && (
                     <View style={styles.watchedBadge}>
                       <Check size={11} color={colors.gold} strokeWidth={3} />
                       <Text style={styles.watchedBadgeText}>Assistido</Text>
