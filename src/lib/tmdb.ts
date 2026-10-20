@@ -3,6 +3,7 @@ import { Movie, MovieDetails, TMDBPaginatedResponse } from '../types';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
+const TMDB_DEFAULT_LANGUAGE = 'pt-BR';
 
 const tmdbToken =
   process.env.EXPO_PUBLIC_TMDB_TOKEN ||
@@ -31,10 +32,12 @@ export function getPosterUrl(
 async function tmdbFetch<T>(endpoint: string, searchParams?: Record<string, string | number>): Promise<T> {
   const url = new URL(`${TMDB_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`);
 
+  url.searchParams.set('language', TMDB_DEFAULT_LANGUAGE);
+
   if (searchParams) {
     Object.entries(searchParams).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
-        url.searchParams.append(key, String(value));
+        url.searchParams.set(key, String(value));
       }
     });
   }

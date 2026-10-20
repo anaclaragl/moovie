@@ -44,6 +44,7 @@ export default function HomeScreen() {
 
   // Profile switch modal state
   const [profileModalVisible, setProfileModalVisible] = useState<boolean>(false);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
 
   const loadHomeData = useCallback(async () => {
     if (!currentUser?.key) return;
@@ -144,11 +145,25 @@ export default function HomeScreen() {
   const initial = isAna ? 'A' : 'L';
 
   // Search results grid dimensions
-  const searchColWidth = Math.floor((windowWidth - 40 - 12) / 2);
+  const effectiveWidth = containerWidth > 0 ? containerWidth : windowWidth;
+  const searchCols =
+    effectiveWidth >= 1200
+      ? 6
+      : effectiveWidth >= 960
+        ? 5
+        : effectiveWidth >= 700
+          ? 4
+          : effectiveWidth >= 480
+            ? 3
+            : 2;
+  const searchColWidth = Math.floor((effectiveWidth - 40 - 12 * (searchCols - 1)) / searchCols);
   const searchColHeight = Math.floor(searchColWidth * 1.5);
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+    >
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 16 }]}

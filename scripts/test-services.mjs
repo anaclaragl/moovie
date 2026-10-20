@@ -20,7 +20,7 @@ const supabaseAnonKey = envVars.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 console.log('Testing TMDB...');
 try {
-  const res = await fetch('https://api.themoviedb.org/3/movie/popular?page=1', {
+  const res = await fetch('https://api.themoviedb.org/3/movie/popular?language=pt-BR&page=1', {
     headers: {
       Accept: 'application/json',
       Authorization: `Bearer ${tmdbToken}`,

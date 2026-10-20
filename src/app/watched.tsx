@@ -34,6 +34,7 @@ export default function WatchedMoviesScreen() {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [containerWidth, setContainerWidth] = useState<number>(0);
 
   const loadData = useCallback(async () => {
     if (!currentUser?.key) return;
@@ -90,10 +91,23 @@ export default function WatchedMoviesScreen() {
     });
   };
 
-  // 2 columns calculation
-  const horizontalPadding = 16;
-  const columnGap = 12;
-  const cardWidth = Math.floor((windowWidth - horizontalPadding * 2 - columnGap) / 2);
+  // Responsive grid calculation
+  const effectiveWidth = containerWidth > 0 ? containerWidth : windowWidth;
+  const horizontalPadding = effectiveWidth < 380 ? 12 : 16;
+  const columnGap = effectiveWidth < 380 ? 10 : 12;
+  const numColumns =
+    effectiveWidth >= 1200
+      ? 6
+      : effectiveWidth >= 960
+        ? 5
+        : effectiveWidth >= 700
+          ? 4
+          : effectiveWidth >= 480
+            ? 3
+            : 2;
+  const cardWidth = Math.floor(
+    (effectiveWidth - horizontalPadding * 2 - columnGap * (numColumns - 1)) / numColumns
+  );
   const cardHeight = Math.floor(cardWidth * 1.5);
 
   const renderItem = ({ item }: { item: WatchedMovieItem }) => {
@@ -163,7 +177,10 @@ export default function WatchedMoviesScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View
+      style={[styles.container, { paddingTop: insets.top }]}
+      onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+    >
       {/* Header */}
       <View style={styles.header}>
         <Pressable
@@ -231,15 +248,16 @@ export default function WatchedMoviesScreen() {
         </View>
       ) : (
         <FlatList
+          key={`watched-grid-${numColumns}`}
           data={filteredItems}
           keyExtractor={(item) => item.rating.id || `${item.rating.tmdb_id}`}
           renderItem={renderItem}
-          numColumns={2}
+          numColumns={numColumns}
           contentContainerStyle={[
             styles.listContent,
-            { paddingBottom: insets.bottom + 40 },
+            { paddingHorizontal: horizontalPadding, paddingBottom: insets.bottom + 40 },
           ]}
-          columnWrapperStyle={styles.columnWrapper}
+          columnWrapperStyle={[styles.columnWrapper, { gap: columnGap }]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -369,6 +387,11 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   cardImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: '100%',
     height: '100%',
   },

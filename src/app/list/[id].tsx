@@ -52,6 +52,7 @@ export default function ListDetailScreen() {
   const [editedName, setEditedName] = useState<string>('');
   const [isRenaming, setIsRenaming] = useState<boolean>(false);
   const [renameError, setRenameError] = useState<string | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
 
   const loadItems = useCallback(async () => {
     if (!listId) return;
@@ -174,10 +175,23 @@ export default function ListDetailScreen() {
     }
   };
 
-  // 2 columns calculation
-  const horizontalPadding = 20;
-  const columnGap = 14;
-  const cardWidth = Math.floor((windowWidth - horizontalPadding * 2 - columnGap) / 2);
+  // Responsive grid calculation
+  const effectiveWidth = containerWidth > 0 ? containerWidth : windowWidth;
+  const horizontalPadding = effectiveWidth < 380 ? 14 : 20;
+  const columnGap = effectiveWidth < 380 ? 10 : 14;
+  const numColumns =
+    effectiveWidth >= 1200
+      ? 6
+      : effectiveWidth >= 960
+        ? 5
+        : effectiveWidth >= 700
+          ? 4
+          : effectiveWidth >= 480
+            ? 3
+            : 2;
+  const cardWidth = Math.floor(
+    (effectiveWidth - horizontalPadding * 2 - columnGap * (numColumns - 1)) / numColumns
+  );
   const cardHeight = Math.floor(cardWidth * 1.5);
 
   const watchedCount = items.filter((i) => watchedIds.has(i.tmdb_id)).length;
@@ -190,7 +204,10 @@ export default function ListDetailScreen() {
         : `${items.length} ${items.length === 1 ? 'filme' : 'filmes'} adicionados`;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View
+      style={[styles.container, { paddingTop: insets.top }]}
+      onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+    >
       {/* Header */}
       <View style={styles.header}>
         <Pressable
@@ -263,11 +280,15 @@ export default function ListDetailScreen() {
         </View>
       ) : (
         <FlatList
+          key={`list-grid-${numColumns}`}
           data={items}
           keyExtractor={(item) => item.id}
-          numColumns={2}
-          columnWrapperStyle={styles.columnWrapper}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 24 }]}
+          numColumns={numColumns}
+          columnWrapperStyle={[styles.columnWrapper, { gap: columnGap }]}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingHorizontal: horizontalPadding, paddingBottom: insets.bottom + 24 },
+          ]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -663,6 +684,7 @@ const styles = StyleSheet.create({
   },
   cardRelative: {
     position: 'relative',
+    width: '100%',
   },
   cardWatchedDim: {
     opacity: 0.78,

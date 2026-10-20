@@ -1,9 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text, View, Pressable, Image } from 'react-native';
+import { StyleSheet, Text, View, Pressable, Image, DimensionValue } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Film } from 'lucide-react-native';
 import { colors, fonts } from '../constants/theme';
-import { getPosterUrl } from '../lib/tmdb';
+import { getPosterUrl, PosterSize } from '../lib/tmdb';
 
 interface PosterCardProps {
   movie: {
@@ -12,25 +12,28 @@ interface PosterCardProps {
     poster_path: string | null;
     release_date?: string;
   };
-  width?: number;
-  height?: number;
+  width?: DimensionValue;
+  height?: DimensionValue;
   onPress?: () => void;
 }
 
 export const PosterCard: React.FC<PosterCardProps> = ({
   movie,
-  width = 140,
-  height = 210,
+  width = '100%',
+  height,
   onPress,
 }) => {
-  const posterUrl = getPosterUrl(movie.poster_path, 'w342');
+  const posterSize: PosterSize =
+    typeof width === 'number' && width > 220 ? 'w500' : 'w342';
+  const posterUrl = getPosterUrl(movie.poster_path, posterSize);
 
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.container,
-        { width, height },
+        { width },
+        height ? { height } : styles.aspectRatioBox,
         pressed && styles.pressed,
       ]}
       accessibilityRole="button"
@@ -74,11 +77,19 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
+  aspectRatioBox: {
+    aspectRatio: 2 / 3,
+  },
   pressed: {
     opacity: 0.85,
     transform: [{ scale: 0.98 }],
   },
   image: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: '100%',
     height: '100%',
   },
